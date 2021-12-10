@@ -1,68 +1,81 @@
 <template>
-  <h1>Hi</h1>
-  <div>{{ msg }}</div>
+  <h1>Method to disable CPK on ropsten</h1>
+  <button type="button" id="modal-trigger">Open modal</button>
+  <div>{{msg}}</div>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent } from "vue";
 
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import Web3Modal from "web3modal";
-import {ethers} from "ethers";
-let zksync;
+import { ethers } from "ethers";
+import { getDefaultProvider, Wallet as zkWallet, Signer as zkSigner } from "zksync";
 
-async function connect() {
-  zksync = await import('zksync');
+export default defineComponent({
+  name: "App",
+  props: {
+    msg: String
+  }
+})
+
+const connect = async () => {
 
   const providerOptions = {
     walletconnect: {
       package: WalletConnectProvider,
       options: {
-        infuraId: "b818c25e42c049faa539560425a18a4e"
+        infuraId: "72b13ae588b44eb9bc04c571bf22c984"
       }
     }
   };
 
   const web3Modal = new Web3Modal({
-    network: "mainnet", // optional
+    network: "ropsten", // optional
     cacheProvider: false, // optional
     providerOptions // required
   });
-  web3Modal.clearCachedProvider();
 
-  const provider = await web3Modal.connect();
+  try {
 
-  const ethersProvider = new ethers.providers.Web3Provider(provider);
-  const ethSigner = await ethersProvider.getSigner();
-  console.log("sign: ", await ethSigner.signMessage("hello-world"));
-  const zksyncProvider = await zksync.getDefaultProvider("mainnet", "HTTP");
-  const wallet = await zksync.Wallet.fromEthSignerNoKeys(ethSigner, zksyncProvider);
-  wallet.ethSignerType = {
-   verificationMethod: "ERC-1271",
-   // Indicates if signer adds `\x19Ethereum Signed Message\n${msg.length}` prefix before signing message.
-   // i.e. if false, we should add this prefix manually before asking to sign message
-   isSignedMsgPrefixed: true,
+    web3Modal.clearCachedProvider();
+
+    const provider = await web3Modal.connect();
+
+    console.log(provider);
+
+
+    const ethersProvider = new ethers.providers.Web3Provider(provider);
+    const ethSigner = await ethersProvider.getSigner();
+    const signMessage = await ethSigner.signMessage("hello-world");
+    console.warn("sign: ", signMessage);
+    const zksyncProvider = await getDefaultProvider("ropsten", "HTTP");
+    const wallet = await zkWallet.fromEthSignerNoKeys(ethSigner, zksyncProvider);
+    wallet.ethSignerType = {
+      verificationMethod: "ERC-1271",
+      // Indicates if signer adds `\x19Ethereum Signed Message\n${msg.length}` prefix before signing message.
+      // i.e. if false, we should add this prefix manually before asking to sign message
+      isSignedMsgPrefixed: true
+    };
+    wallet.signer = await zkSigner.fromSeed(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3,
+      4, 5, 6, 7, 8, 9]));
+    const keySet = await wallet.isSigningKeySet();
+    console.warn("is key set?:", keySet);
+    const tx = await wallet.onchainAuthSigningKey();
+    console.warn("tx: ", tx.hash);
+    await tx.wait();
+
+    const zkTx = await wallet.setSigningKey({ feeToken: "ETH", ethAuthType: "Onchain" });
+    console.warn("zk txn link", `https://rinkeby.zkscan.io/explorer/transactions/${zkTx.txHash}`);
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
   }
-  wallet.signer = zksync.Signer.fromSeed(new Uint8Array([1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9]))
-  console.log(await wallet.isSigningKeySet())
-  const tx = await wallet.onchainAuthSigningKey();
-  console.log("tx: ", tx.hash);
-  await tx.wait();
+};
 
-  const zktx = await wallet.setSigningKey({feeToken: "ETH", onchainAuth: true});
-  console.log("zktx:", zktx.txHash);
-}
-
-connect();
-
-
-export default defineComponent({
-  name: 'App',
-  props: {
-    msg: String
-  }
-});
-
+document.addEventListener('readystatechange', () => {
+  document.querySelector('#modal-trigger')?.addEventListener('click', connect)
+})
 </script>
 
 <style>

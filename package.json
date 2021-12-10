@@ -10,11 +10,11 @@
   "dependencies": {
     "@walletconnect/web3-provider": "^1.2.2",
     "core-js": "^3.6.5",
-    "ethers": "^5.0.16",
+    "ethers": "latest",
     "string_decoder": "^1.3.0",
     "vue": "^3.0.0",
-    "web3modal": "^1.9.1",
-    "zksync": "^0.7.3"
+    "web3modal": "^1.9.4",
+    "zksync": "^0.11.6"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^2.33.0",
