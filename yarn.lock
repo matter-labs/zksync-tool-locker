@@ -10206,7 +10206,7 @@ vue-template-es2015-compiler@^1.9.0:
   resolved "https://registry.yarnpkg.com/vue-template-es2015-compiler/-/vue-template-es2015-compiler-1.9.1.tgz#1ee3bc9a16ecbf5118be334bb15f9c46f82f5825"
   integrity sha512-4gDntzrifFnCEvyoO8PqyJDmguXgVPxKiIxrBKjIowvL9l+N66196+72XVYR8BBf1Uv1Fgt3bGevJ+sEmxfZzw==
 
-vue@^3.0.0:
+vue@^3.2.24:
   version "3.2.24"
   resolved "https://registry.yarnpkg.com/vue/-/vue-3.2.24.tgz#6de7b01e55740dc37c0a5dbd45e70eed49f95189"
   integrity sha512-PvCklXNfcUMyeP/a9nME27C32IipwUDoS45rDyKn5+RQrWyjL+0JAJtf98HL6y9bfqQRTlYjSowWEB1nXxvG5Q==
