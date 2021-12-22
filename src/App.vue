@@ -28,7 +28,8 @@
   <div class="py-8">
     <div class="text-center">
       <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wide">ropsten</p>
-      <h1 class="mt-2 text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Unset CPK</h1>
+      <h1 class="mt-2 text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Un
+      CPK</h1>
       <p class="mt-2 text-base text-gray-500">This tool allows you to unset zkSync's CPK on testnets </p>
       <div class="mt-6">
         <button
@@ -154,14 +155,8 @@ export default {
 
         this.recordLog("checking isSigningKeySet...");
 
-        const keySetBefore = await wallet.isSigningKeySet();
-
         this.recordLog("isSigningKeySet status for `ropsten` (wallet address: " + wallet.address() + ") : " + (keySetBefore ? "signed" : "unsigned"), keySetBefore ? "log" :
           "warning");
-
-        if (!keySetBefore) {
-          throw new Error("key not set");
-        }
 
         this.recordLog("signer from seed received");
 
