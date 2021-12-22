@@ -53,9 +53,7 @@
               <span class="px-3 py-1 rounded font-bold text-xs bg-gray-400 flex items-center justify-center ring-8 ring-white">{{ oneLog.severity }}</span>
             </div>
             <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-2 overflow-hidden">
-              <div>
-                <p class="text-sm text-gray-500">{{ oneLog.text }}</p>
-              </div>
+              <div class="text-sm text-gray-500">{{ oneLog.text }}</div>
               <div class="text-right text-sm whitespace-nowrap text-gray-500">
                 <time>{{ oneLog.time.toLocaleTimeString() }}</time>
               </div>
@@ -71,7 +69,7 @@
 <script lang="ts">
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import Web3Modal from "web3modal";
-import { providers } from "ethers";
+import { Web3Provider } from "@ethersproject/providers";
 import { getDefaultProvider, Wallet as zkWallet, Signer as zkSigner } from "zksync";
 
 export default {
@@ -79,7 +77,7 @@ export default {
     return {
       logs: [] as unknown[],
       isLoading: false as boolean,
-      provider: null as providers.Provider | null
+      provider: null as Web3Provider | null
     };
   },
   mounted () {
@@ -118,76 +116,104 @@ export default {
 
         const provider = await web3Modal.connect();
 
-        console.log(provider);
-
         this.recordLog("provider received");
 
-        this.provider = new providers.Web3Provider(provider);
-
-        this.recordLog("ethers web3 provider received");
+        this.provider = new Web3Provider(provider, "ropsten");
 
         const ethSigner = await this.provider.getSigner();
 
-        this.recordLog("signer received");
+        this.recordLog("trying to sign “hello-world” for test...");
 
-        this.recordLog("trying to sign “hello-world” for test");
-        const signMessage = await ethSigner.signMessage("hello-world");
-        this.recordLog("signing results: " + signMessage);
+        const signedMessage = await ethSigner.signMessage("hello-world");
+
+        this.recordLog("signing results: " + signedMessage);
 
         const zksyncProvider = await getDefaultProvider("ropsten", "HTTP");
 
-        this.recordLog("zksyncProvider received");
         const wallet = await zkWallet.fromEthSignerNoKeys(ethSigner, zksyncProvider);
 
-        this.recordLog("zkWallet received, getting signer");
+        console.log("Wallet", wallet);
+
+        this.recordLog("Setting signer type ERC-1271...");
 
         wallet.ethSignerType = {
-          verificationMethod: "ERC-1271",
-          // Indicates if signer adds `\x19Ethereum Signed Message\n${msg.length}` prefix before signing message.
-          // i.e. if false, we should add this prefix manually before asking to sign message
+          verificationMethod: 'ERC-1271',
           isSignedMsgPrefixed: true
         };
 
-        this.recordLog("awaiting signer from seed...");
+        this.recordLog("Type set!");
+
+        this.recordLog("Creating zkSigner from seed byte array...");
+
         wallet.signer = await zkSigner.fromSeed(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3,
           4, 5, 6, 7, 8, 9]));
 
-        this.recordLog("checking isSigningKeySet...");
+        this.recordLog("zkSigner created!");
 
-        const keySetBefore = await wallet.isSigningKeySet();
+        this.recordLog("checking if the account "+wallet.address()+" exists...");
 
-        this.recordLog("isSigningKeySet status for `ropsten` (wallet address: " + wallet.address() + ") : " + (keySetBefore ? "signed" : "unsigned"), keySetBefore ? "log" :
-          "warning");
+        const accountId = await wallet.getAccountId();
 
-        if (!keySetBefore) {
-          throw new Error("key not set");
+        if (typeof accountId !== "number")
+        {
+          throw Error("It is required to have a history of balances on the account to activate it");
         }
 
-        this.recordLog("signer from seed received");
+        this.recordLog("Account exists. ID: "+accountId+". Check it at zkScan: https://ropsten.zkscan.io/explorer/accounts/"+wallet.address());
 
-        const tx = await wallet.onchainAuthSigningKey();
+        this.recordLog("checking if the key is set...");
 
-        this.recordLog("onchainAuthSigningKey tx hash: " + tx.hash + ")");
+        const isCPKSet = await wallet.isSigningKeySet();
 
-        this.recordLog("awaiting 10 confirmations");
+        this.recordLog("CPK is " + (isCPKSet || "not") + " set", isCPKSet ? "log" : "warning");
 
-        await tx.wait(10);
+        this.recordLog("checking if the onchain signing key is set...");
 
-        this.recordLog("Confirmed! Calling setSigning key with feeToken ETH & ethAuthType Onchain...");
+        const onchainCPKSet = await wallet.isOnchainAuthSigningKeySet();
+        this.recordLog("CPK is " + (onchainCPKSet || "not") + " set", onchainCPKSet ? "log" : "warning");
 
-        const zkTx = await wallet.setSigningKey({ feeToken: "ETH", ethAuthType: "Onchain" });
+        if (!onchainCPKSet) {
+          this.recordLog("getting onchain auth signing key...");
 
-        this.recordLog("Operation formed (url: " + `https://ropsten.zkscan.io/explorer/transactions/${zkTx.txHash}`);
+          const tx = await wallet.onchainAuthSigningKey();
+
+          this.recordLog("TX created successfully. Hash: " + tx.hash);
+
+          this.recordLog("awaiting tx execution (4 confirmations) to get the ContractReceipt...");
+
+          const receivedContractReceipt = await tx.wait(4);
+
+          this.recordLog("Contract Receipt received. Used gas: " + receivedContractReceipt.cumulativeGasUsed);
+        }
+
+
+        this.recordLog("Setting signing key...");
+
+        const signingTxn = await wallet.setSigningKey({ feeToken: "ETH", ethAuthType: "Onchain" });
+
+        console.log("Transaction w/t hash: " + signingTxn.txHash + " has state " + signingTxn.state + " Hash:" + signingTxn.txHash);
+
+        this.recordLog("awaiting tx receipts...");
+
+        const receipt = await signingTxn.awaitReceipt();
+
+        if (receipt.failReason !== undefined) {
+          throw Error(receipt.failReason);
+        }
+
+        this.recordLog("Success! Block nr: " + receipt.block.blockNumber);
+        this.recordLog("See in block explorer: https://ropsten.zkscan.io/explorer/transactions/" + signingTxn.txHash);
 
       } catch (err) {
-        console.error(err)
+        console.log(err, typeof err);
         this.recordLog(err?.message || err as string, "error");
         this.provider = null;
       }
     },
     beforeConnect (): void {
       this.recordLog("Before the connection clearing all from previous wallet");
-      if (this.provider) {
+      if (this.provider
+      ) {
         console.log(this.provider);
         this.recordLog("found active provider", "warning");
         // await this.provider!.ws!.disconnect();
@@ -197,7 +223,8 @@ export default {
       localStorage.removeItem("walletconnect");
     }
   }
-};
+}
+;
 </script>
 
 <style lang="css">
