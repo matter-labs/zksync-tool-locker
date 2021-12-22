@@ -25,35 +25,65 @@
       </a>
     </a>
   </div>
-  <div class="py-8">
-    <div class="text-center">
-      <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wide">ropsten</p>
-      <h1 class="mt-2 text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Unset CPK</h1>
+  <div class="py-8 text-center">
+    <div class="">
+      <div class="relative inline-flex flex-col justify-center max-w-content mx-auto">
+        <span class="text-sm font-semibold text-indigo-600 uppercase tracking-wide absolute top-0 right-0 transform translate-x-20">ropsten</span>
+        <h1 class="mt-2 text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Unset CPK</h1>
+      </div>
       <p class="mt-2 text-base text-gray-500">This tool allows you to unset zkSync's CPK on testnets </p>
       <div class="mt-6">
+        <div class="border-1 inline-flex border-indigo-700 rounded bg-gray-100 py-2 px-4 flex-auto justify-between items-center space-x-3" v-if="loggedIn">
+          <h2 class="text-lg text-base p-0 m-0">{{ this.address }}</h2>
+          <a :href="zkScanLink" target="_blank"
+             class="inline-flex m-0 items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-sm text-white bg-indigo-600 hover:bg-indigo-900"
+             v-if="zkScanLink">Open zkScan
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </a>
+          <a href="#" @click="reset"
+             class="inline-flex m-0 items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded shadow-xs text-indigo-700 hover:bg-indigo-200 border border-indigo-600">
+            Logout
+          </a>
+        </div>
         <button
+          v-else
+          :disabled="loginInProgress"
           @click="connect"
           type="button"
           class="overflow-visible justify-center items-center py-2 px-5 my-8 mx-auto text-xl font-normal leading-normal text-center text-white normal-case align-middle bg-indigo-800 rounded border border-indigo-800 border-solid cursor-pointer select-none box-border whitespace-no-wrap"
           style="transition: background-color 0.21s ease 0s, border-color 0.21s ease 0s, color 0.21s ease 0s;"
         >
-          Connect your wallet
+          <template v-if="loginInProgress">
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            connecting...
+          </template>
+          <template v-else>
+            Connect your wallet
+          </template>
         </button>
       </div>
     </div>
   </div>
   <div class="w-2/3 flow-root mx-auto" v-if="logs.length > 0">
     <p class="text-sm font-semibold text-indigo-600 mb-4 uppercase tracking-wide">Log board</p>
-    <ul role="list" class="-mb-8">
-      <li v-for="oneLog in logs" :key="oneLog.time" :class="{'bg-red-400': oneLog.severity === 'error','bg-yellow-200': oneLog.severity === 'warning'}">
+    <ul role="list" class="-mb-8" id="logs-list">
+      <li v-for="oneLog in logs" :key="oneLog.time" :class="{'bg-red-200': oneLog.severity === 'error','bg-yellow-200': oneLog.severity === 'warning'}" class="pr-4">
         <div class="relative pb-8">
-          <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+          <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 verticalLine" aria-hidden="true"></span>
           <div class="relative flex space-x-3">
             <div>
-              <span class="px-3 py-1 rounded font-bold text-xs bg-gray-400 flex items-center justify-center ring-8 ring-white">{{ oneLog.severity }}</span>
+              <span class="px-3 py-1 rounded font-bold text-xs bg-gray-400 flex items-center justify-center ring-8 ring-white" :class="{'bg-yellow-500': oneLog.severity ===
+              'warning',
+                   'bg-red-700': oneLog.severity === 'error', 'text-white': oneLog.severity !== 'log'}">{{ oneLog.severity }}</span>
             </div>
             <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-2 overflow-hidden">
-              <div class="text-sm text-gray-500">{{ oneLog.text }}</div>
+              <div class="text-sm text-gray-500 pl-2">{{ oneLog.text }}</div>
               <div class="text-right text-sm whitespace-nowrap text-gray-500">
                 <time>{{ oneLog.time.toLocaleTimeString() }}</time>
               </div>
@@ -73,15 +103,21 @@ import { Web3Provider } from "@ethersproject/providers";
 import { getDefaultProvider, Wallet as zkWallet, Signer as zkSigner } from "zksync";
 
 export default {
-  data: function () {
-    return {
-      logs: [] as unknown[],
-      isLoading: false as boolean,
-      provider: null as Web3Provider | null
-    };
+  computed: {
+    zkScanLink () {
+      return this.loggedIn ? `https://ropsten.zkscan.io/explorer/accounts/${this.address}` : undefined;
+    },
+    loggedIn () {
+      return this.address;
+    }
   },
-  mounted () {
-    this.recordLog("Loaded!");
+  data () {
+    return {
+      loginInProgress: false,
+      address: "",
+      logs: [] as unknown[],
+      isLoading: false as boolean
+    };
   },
   methods: {
     recordLog (message: string, severity: "log" | "warning" | "error" = "log") {
@@ -92,10 +128,8 @@ export default {
       });
     },
     async connect () {
-      this.beforeConnect();
+      this.reset();
       try {
-
-        this.recordLog("started new connection");
         const providerOptions = {
           walletconnect: {
             package: WalletConnectProvider, // required
@@ -105,93 +139,98 @@ export default {
           }
         };
 
-        this.recordLog("trigger popup w/t infura key & ropsten network");
-
         const web3Modal = new Web3Modal({
           network: "ropsten", // optional
           providerOptions // required
         });
 
-        this.recordLog("clearing cached provider (if any)");
+        this.recordLog("Awaiting provider...");
+
+        this.loginInProgress = true;
 
         const provider = await web3Modal.connect();
 
-        this.recordLog("provider received");
+        this.recordLog("Provider received.");
 
-        this.provider = new Web3Provider(provider, "ropsten");
+        const web3Provider = new Web3Provider(provider, "ropsten");
 
-        const ethSigner = await this.provider.getSigner();
+        this.recordLog("Getting ETH Signer...");
 
-        this.recordLog("trying to sign “hello-world” for test...");
+        const ethSigner = await web3Provider.getSigner();
 
-        const signedMessage = await ethSigner.signMessage("hello-world");
+        this.recordLog("Trying to sign “hello-world” message...");
 
-        this.recordLog("signing results: " + signedMessage);
+        this.recordLog("Signing results: " + (await ethSigner.signMessage("hello-world")));
+
+        this.recordLog("Getting zkProvider...");
 
         const zksyncProvider = await getDefaultProvider("ropsten", "HTTP");
 
+        this.recordLog("Provider received");
+
+        this.recordLog("Creating no-keys zkWallet...");
+
         const wallet = await zkWallet.fromEthSignerNoKeys(ethSigner, zksyncProvider);
 
-        console.log("Wallet", wallet);
-
-        this.recordLog("Setting signer type ERC-1271...");
-
         wallet.ethSignerType = {
-          verificationMethod: 'ERC-1271',
+          verificationMethod: "ERC-1271",
+          // Indicates if signer adds `\x19Ethereum Signed Message\n${msg.length}` prefix before signing message.
+          // i.e. if false, we should add this prefix manually before asking to sign message
           isSignedMsgPrefixed: true
         };
 
-        this.recordLog("Type set!");
+        this.address = wallet.address();
 
-        this.recordLog("Creating zkSigner from seed byte array...");
+        this.loginInProgress = false;
+
+        this.recordLog("zkWallet created and configured with ERC-1271 signer type");
+
+        this.recordLog("Replacing signer with seed-based...");
 
         wallet.signer = await zkSigner.fromSeed(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3,
-          4, 5, 6, 7, 8, 9]));
+          4,
+          5, 6, 7, 8, 9]));
 
-        this.recordLog("zkSigner created!");
+        this.recordLog("zkWallet Signer replaced!");
 
-        this.recordLog("checking if the account "+wallet.address()+" exists...");
+        this.recordLog("Checking if L2-account exists...");
 
         const accountId = await wallet.getAccountId();
 
-        if (typeof accountId !== "number")
-        {
-          throw Error("It is required to have a history of balances on the account to activate it");
+        if (typeof accountId !== "number") {
+          throw Error("It is required to have a history of balances on the account to deactivate CPK");
         }
 
-        this.recordLog("Account exists. ID: "+accountId+". Check it at zkScan: https://ropsten.zkscan.io/explorer/accounts/"+wallet.address());
+        this.recordLog("Account exists. ID: " + accountId);
 
-        this.recordLog("checking if the key is set...");
+        this.recordLog("Checking if the signing key is set...");
 
         const isCPKSet = await wallet.isSigningKeySet();
 
         this.recordLog("CPK is " + (isCPKSet || "not") + " set", isCPKSet ? "log" : "warning");
 
-        this.recordLog("checking if the onchain signing key is set...");
+        this.recordLog("Signing CPK...");
 
-        const onchainCPKSet = await wallet.isOnchainAuthSigningKeySet();
-        this.recordLog("CPK is " + (onchainCPKSet || "not") + " set", onchainCPKSet ? "log" : "warning");
+        const tx = await wallet.onchainAuthSigningKey();
 
-        if (!onchainCPKSet) {
-          this.recordLog("getting onchain auth signing key...");
+        this.recordLog("TNX created successfully. Hash: " + tx.hash);
 
-          const tx = await wallet.onchainAuthSigningKey();
+        this.recordLog("Waiting for the confirmations...");
 
-          this.recordLog("TX created successfully. Hash: " + tx.hash);
+        const receivedContractReceipt = await tx.wait();
 
-          this.recordLog("awaiting tx execution (4 confirmations) to get the ContractReceipt...");
-
-          const receivedContractReceipt = await tx.wait(4);
-
-          this.recordLog("Contract Receipt received. Used gas: " + receivedContractReceipt.cumulativeGasUsed);
-        }
-
+        this.recordLog("Contract Receipt received");
 
         this.recordLog("Setting signing key...");
 
+        //
+        // console.log("Transaction w/t hash: " + signingTxn.txHash + " has state " + signingTxn.state + " Hash:" + signingTxn.txHash);
+
         const signingTxn = await wallet.setSigningKey({ feeToken: "ETH", ethAuthType: "Onchain" });
 
-        console.log("Transaction w/t hash: " + signingTxn.txHash + " has state " + signingTxn.state + " Hash:" + signingTxn.txHash);
+        this.recordLog("Signing key set! Hash: " + signingTxn.txHash);
+
+        this.recordLog("See in block explorer: https://ropsten.zkscan.io/explorer/transactions/" + signingTxn.txHash);
 
         this.recordLog("awaiting tx receipts...");
 
@@ -202,25 +241,19 @@ export default {
         }
 
         this.recordLog("Success! Block nr: " + receipt.block.blockNumber);
-        this.recordLog("See in block explorer: https://ropsten.zkscan.io/explorer/transactions/" + signingTxn.txHash);
 
+        this.recordLog("ALL DONE! Thanks!");
+
+        return;
       } catch (err) {
-        console.log(err, typeof err);
+        this.reset();
         this.recordLog(err?.message || err as string, "error");
-        this.provider = null;
       }
     },
-    beforeConnect (): void {
-      this.recordLog("Before the connection clearing all from previous wallet");
-      if (this.provider
-      ) {
-        console.log(this.provider);
-        this.recordLog("found active provider", "warning");
-        // await this.provider!.ws!.disconnect();
-        this.provider = null;
-      }
-      this.recordLog(window.localStorage.getItem("walletconnect") as string);
-      localStorage.removeItem("walletconnect");
+    reset (): void {
+      this.loginInProgress = false;
+      this.address = null;
+      this.recordLog("Resetting all");
     }
   }
 }
@@ -288,5 +321,9 @@ button {
 
 button:hover {
   opacity: 1;
+}
+
+#logs-list li:last-child .verticalLine {
+  display: none !important;
 }
 </style>
