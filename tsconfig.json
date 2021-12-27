@@ -1,15 +1,19 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "esnext",
-    "strict": true,
-    "jsx": "preserve",
-    "importHelpers": true,
-    "moduleResolution": "node",
-    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "sourceMap": true,
+    "experimentalDecorators": true,
+    "lib": [
+      "ESNext",
+      "ESNext.AsyncIterable",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "noEmit": true,
+    "noImplicitAny": false,
     "baseUrl": ".",
     "types": [
       "webpack-env"
@@ -18,13 +22,7 @@
       "@/*": [
         "src/*"
       ]
-    },
-    "lib": [
-      "esnext",
-      "dom",
-      "dom.iterable",
-      "scripthost"
-    ]
+    }
   },
   "include": [
     "src/**/*.ts",
