@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "lock-tool-zksync"
+  },
+  "targets": {
+    "lock-tool-zksync": {
+      "hosting": {
+        "live": [
+          "lock-tool-zksync"
+        ]
+      }
+    }
   }
 }
