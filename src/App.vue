@@ -1,10 +1,18 @@
 <template>
+  <div class="sm:hidden absolute top-4 left-0 w-full px-4">
+    <label for="tabs" class="inline-flex mb-2 text-sm text-gray-300">Choose network</label>
+    <hr>
+    <select name="tabs" class="block w-full focus:ring-indigo-500 focus:border-indigo-500 border-gray-300 rounded-md" v-model="currentNetwork">
+      <option v-for="(network) in ['ropsten', 'rinkeby', 'mainnet']" :key="`mobile-${network}`">{{ network }}</option>
+    </select>
+  </div>
   <div class="flex-shrink-0 flex justify-center">
     <a href="/" class="inline-flex">
-      <span class="sr-only">zkSync Ropsten</span>
+      <span class="sr-only">zkSync {{ currentNetwork }}</span>
       <a href="https://zksync.io" target="_blank">
         <svg fill="none" class="h-8 w-auto" viewBox="0 0 1407 276" xmlns="http://www.w3.org/2000/svg">
-          <path clip-rule="evenodd" d="M485.481 137.772L347.819.254944V100.967L211.134 201.801L347.819 201.896V275.289L485.481 137.772Z" fill="#4E529A" fill-rule="evenodd"></path>
+          <path clip-rule="evenodd" d="M485.481 137.772L347.819.254944V100.967L211.134 201.801L347.819 201.896V275.289L485.481 137.772Z" fill="#4E529A"
+                fill-rule="evenodd"></path>
           <path clip-rule="evenodd" d="M0.200116 137.722L137.862 275.239L137.862 175.337L274.547 73.6923L137.862 73.5981L137.862.205097L0.200116 137.722Z" fill="#8C8DFC"
                 fill-rule="evenodd"></path>
           <path d="M697.395 218.752H591.773V188.421L652.239 121.018H593.33V91.2059H696.357V119.982L634.073 188.68H697.395V218.752Z" fill-opacity="0.9" class="logoLetter"></path>
@@ -27,8 +35,19 @@
   </div>
   <div class="py-8 text-center">
     <div class="">
+      <div class="w-auto mx-auto mb-10 -mt-10">
+        <div class="hidden sm:block">
+          <nav class="flex flex-auto space-x-4 justify-center my-4 w-auto" aria-label="Tabs">
+            <a v-for="(network) in ['ropsten', 'rinkeby', 'mainnet']" href="#" :key="network" @click="currentNetwork = network" :class="{'bg-gray-200': currentNetwork === network,
+            'text-gray-800': currentNetwork === network}"
+               class="text-gray-600 hover:opacity-1/2 px-3 py-2 font-medium text-sm rounded-md">
+              {{ network }}
+            </a>
+          </nav>
+        </div>
+      </div>
       <div class="relative inline-flex flex-col justify-center max-w-content mx-auto">
-        <span class="text-sm font-semibold text-indigo-600 uppercase tracking-wide absolute top-0 right-0 transform translate-x-20">ropsten</span>
+        <span class="text-sm font-semibold text-indigo-600 uppercase tracking-wide absolute top-0 right-0 transform translate-x-20">{{ currentNetwork }}</span>
         <h1 class="mt-2 text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">Unset CPK</h1>
       </div>
       <p class="mt-2 text-base text-gray-500">This tool allows you to unset zkSync's CPK on testnets </p>
@@ -47,14 +66,9 @@
             Logout
           </a>
         </div>
-        <button
-          v-else
-          :disabled="loginInProgress"
-          @click="connect"
-          type="button"
-          class="overflow-visible justify-center items-center py-2 px-5 my-8 mx-auto text-xl font-normal leading-normal text-center text-white normal-case align-middle bg-indigo-800 rounded border border-indigo-800 border-solid cursor-pointer select-none box-border whitespace-no-wrap"
-          style="transition: background-color 0.21s ease 0s, border-color 0.21s ease 0s, color 0.21s ease 0s;"
-        >
+        <button v-else :disabled="loginInProgress" @click="connect" type="button"
+                class="overflow-visible justify-center items-center py-2 px-5 my-8 mx-auto text-xl font-normal leading-normal text-center text-white normal-case align-middle bg-indigo-800 rounded border border-indigo-800 border-solid cursor-pointer select-none box-border whitespace-no-wrap"
+                style="transition: background-color 0.21s ease 0s, border-color 0.21s ease 0s, color 0.21s ease 0s;">
           <template v-if="loginInProgress">
             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -93,31 +107,47 @@
       </li>
     </ul>
   </div>
-
 </template>
 
 <script lang="ts">
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import Web3Modal from "web3modal";
 import { Web3Provider } from "@ethersproject/providers";
-import { getDefaultProvider, Wallet as zkWallet, Signer as zkSigner } from "zksync";
+import { getDefaultProvider, Signer as zkSigner, Wallet as zkWallet } from "zksync";
 
 export default {
   computed: {
     zkScanLink () {
-      return this.loggedIn ? `https://ropsten.zkscan.io/explorer/accounts/${this.address}` : undefined;
+      return this.loggedIn ? `https://${this.currentNetwork === "mainnet" ? "" : this.currentNetwork + "."}zkscan.io/explorer/accounts/${this.address}` : undefined;
     },
     loggedIn () {
       return this.address;
+    },
+    apiUrl () {
+      return this.currentNetwork;
     }
   },
   data () {
     return {
+      dropdownOpen: false,
+      currentNetwork: 'ropsten',
       loginInProgress: false,
       address: "",
       logs: [] as unknown[],
       isLoading: false as boolean
     };
+  },
+  mounted () {
+    const storedNetwork = window.localStorage.getItem("zksync-tool-locker");
+    if (storedNetwork){
+      this.currentNetwork = storedNetwork;
+    }
+  },
+  watch: {
+    currentNetwork(value){
+      console.log(value);
+      window.localStorage.setItem("zksync-tool-locker", value)
+    }
   },
   methods: {
     recordLog (message: string, severity: "log" | "warning" | "error" = "log") {
@@ -125,6 +155,11 @@ export default {
         text: message,
         severity,
         time: new Date()
+      });
+      this.$nextTick(() => {
+        if (severity !== "error") {
+          window.scrollTo(0, document.body.scrollHeight);
+        }
       });
     },
     async connect () {
@@ -140,7 +175,7 @@ export default {
         };
 
         const web3Modal = new Web3Modal({
-          network: "ropsten", // optional
+          network: this.currentNetwork, // optional
           providerOptions // required
         });
 
@@ -152,7 +187,7 @@ export default {
 
         this.recordLog("Provider received.");
 
-        const web3Provider = new Web3Provider(provider, "ropsten");
+        const web3Provider = new Web3Provider(provider, this.currentNetwork);
 
         this.recordLog("Getting ETH Signer...");
 
@@ -164,7 +199,7 @@ export default {
 
         this.recordLog("Getting zkProvider...");
 
-        const zksyncProvider = await getDefaultProvider("ropsten", "HTTP");
+        const zksyncProvider = await getDefaultProvider(this.currentNetwork, "HTTP");
 
         this.recordLog("Provider received");
 
@@ -217,7 +252,7 @@ export default {
 
         this.recordLog("Waiting for the confirmations...");
 
-        const receivedContractReceipt = await tx.wait();
+        await tx.wait();
 
         this.recordLog("Contract Receipt received");
 
@@ -230,7 +265,7 @@ export default {
 
         this.recordLog("Signing key set! Hash: " + signingTxn.txHash);
 
-        this.recordLog("See in block explorer: https://ropsten.zkscan.io/explorer/transactions/" + signingTxn.txHash);
+        this.recordLog("See in block explorer: https://" + (this.currentNetwork === "mainnet" ? "" : this.currentNetwork + ".") + "zkscan.io/explorer/transactions/" + signingTxn.txHash);
 
         this.recordLog("awaiting tx receipts...");
 
@@ -256,8 +291,7 @@ export default {
       this.recordLog("Resetting all");
     }
   }
-}
-;
+};
 </script>
 
 <style lang="css">

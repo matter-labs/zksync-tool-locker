@@ -1,5 +1,45 @@
 {
-  "name": "lock-account",
+  "name": "@matter-labs/zksync-tool-locker",
+  "title": "zkSync Locker Dev-tool",
+  "homepage": "https://github.com/matter-labs/zksync-web-placeholder",
+  "description": "zkSync v.1.x developer tool for CPK-locking authorized account",
+  "keywords": [
+    "tailwindcss",
+    "Vue",
+    "zksync",
+    "ethereum",
+    "web",
+    "Layer2",
+    "Rollup",
+    "Matter Labs",
+    "zkSync Webpage dapps",
+    "dapp",
+    "ethers",
+    "team-front",
+    "",
+    "Vue",
+    "Typescript",
+    "team-frontend"
+  ],
+  "license": "MIT",
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://www.opensource.org/licenses/mit-license.php"
+    },
+    {
+      "type": "Apache-2.0",
+      "url": "https://opensource.org/licenses/apache2.0.php"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matter-labs/zksync-tool-locker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/matter-labs/zksync-tool-locker/issues"
+  },
+  "author": "Matter Labs",
   "version": "0.1.0",
   "private": true,
   "scripts": {
